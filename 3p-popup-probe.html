@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Third-party Popup Probe</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:2rem;line-height:1.45}
+  code{background:#f0f0f3;padding:.1rem .3rem;border-radius:6px}
+  .small{color:#555}
+</style>
+<body>
+  <h1>3P Popup Probe</h1>
+  <p>If you can see this, the popup opened successfully on <code id="host"></code>.</p>
+  <p class="small" id="cookieNote"></p>
+
+  <script>
+    document.getElementById('host').textContent = location.host;
+
+    // Ack opener (works cross-origin)
+    try { window.opener && window.opener.postMessage({ type: 'tp-popup-opened' }, '*'); } catch(e){}
+
+    // Optional: show whether cookies work here (top-level for this domain)
+    (function(){
+      let allowed = false, detail = '';
+      const name = 'popup_fp_probe', val = String(Math.random()).slice(2);
+      try {
+        const https = location.protocol === 'https:';
+        // In top-level context, SameSite=None isn't required, but Secure is recommended on HTTPS
+        document.cookie = `${name}=${val}; Max-Age=60; Path=/; ${https ? 'Secure' : ''}`;
+        allowed = document.cookie.indexOf(`${name}=${val}`) !== -1;
+        if (!allowed) detail = 'Cookie not readable (likely disabled on this site).';
+      } catch(e){ detail = 'Exception writing cookie.'; }
+      document.getElementById('cookieNote').textContent =
+        'Cookie on this domain (top-level): ' + (allowed ? 'works' : 'blocked') +
+        (detail ? ' — ' + detail : '');
+    })();
+
+    // Close after a short pause (optional)
+    setTimeout(() => { try { window.close(); } catch(e){} }, 1200);
+  </script>
+</body>
+</html>
