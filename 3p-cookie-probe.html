@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>3P Cookie Probe</title>
+<script>
+(function () {
+  const name = 'thirdparty_probe';
+  const val = String(Math.random()).slice(2);
+  let detail = '';
+  let allowed = false;
+
+  try {
+    const isHttps = location.protocol === 'https:';
+    if (!isHttps) {
+      detail += 'Not HTTPS; Secure cookies will be rejected. ';
+    }
+    // Modern 3P attempt
+    document.cookie = `${name}=${val}; Max-Age=120; Path=/; SameSite=None; ${isHttps ? 'Secure' : ''}`;
+    allowed = document.cookie.indexOf(`${name}=${val}`) !== -1;
+
+    if (!allowed) {
+      // Fallback attempt (usually blocked in 3P on modern browsers)
+      document.cookie = `${name}=${val}; Max-Age=120; Path=/`;
+      if (document.cookie.indexOf(`${name}=${val}`) !== -1) {
+        allowed = true;
+        detail += 'Fallback cookie without SameSite=None was readable (unexpected on modern browsers). ';
+      } else {
+        detail += 'Cookie not readable in 3P context. ';
+      }
+    }
+  } catch (e) {
+    detail += 'Exception when setting cookie: ' + (e && e.message ? e.message : String(e));
+  }
+
+  try { parent.postMessage({ type: '3pc-result', allowed, detail }, "*"); } catch (e) {}
+})();
+</script>
+<body></body>
+</html>
