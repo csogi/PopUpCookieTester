@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Browser Privacy Check</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--ok:#1a7f37;--bad:#b3261e;--warn:#b26b00;--muted:#666}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.4;margin:0;padding:2rem;background:#f7f7f8;color:#111}
+    .wrap{max-width:820px;margin:0 auto}
+    h1{margin:0 0 1rem}
+    p{color:#333}
+    .card{background:#fff;border:1px solid #e6e6e9;border-radius:16px;padding:1rem 1.25rem;margin:0 0 1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .row{display:flex;gap:.75rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .btn{appearance:none;border:1px solid #111;border-radius:999px;padding:.6rem 1rem;background:#111;color:#fff;font-weight:600;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .status{display:inline-flex;align-items:center;gap:.5rem;font-weight:600}
+    .dot{width:.7rem;height:.7rem;border-radius:50%}
+    .ok{color:var(--ok)} .ok .dot{background:var(--ok)}
+    .bad{color:var(--bad)} .bad .dot{background:var(--bad)}
+    .warn{color:var(--warn)} .warn .dot{background:var(--warn)}
+    code{background:#f0f0f3;padding:.15rem .35rem;border-radius:6px}
+    .small{color:var(--muted);font-size:.9rem}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Browser Privacy Check</h1>
+    <p class="small">This page checks if your browser is blocking pop-ups and third-party cookies.</p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="status" id="popupStatus"><span class="dot" style="background:#ccc"></span> Pop-ups: <span class="mono" id="popupText">not checked</span></div>
+          <div class="small">We’ll try to open a tiny window and immediately close it.</div>
+        </div>
+        <button class="btn" id="btnPopup">Test pop-ups</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="status" id="fpCookieStatus"><span class="dot" style="background:#ccc"></span> First-party cookies: <span class="mono" id="fpCookieText">not checked</span></div>
+          <div class="small">Quick local cookie set/read on this page.</div>
+        </div>
+        <button class="btn" id="btnFP">Test 1P cookies</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="status" id="tpCookieStatus"><span class="dot" style="background:#ccc"></span> Third-party cookies: <span class="mono" id="tpCookieText">not checked</span></div>
+          <div class="small">
+            Loads a cross-site iframe that tries to set/read a cookie and reports back.
+            <br/>Update the iframe URL below to a different site you control.
+          </div>
+          <div class="small mono" id="probeUrlShown"></div>
+        </div>
+        <button class="btn" id="btnTP">Test 3P cookies</button>
+      </div>
+      <iframe id="probeFrame" title="3P Cookie Probe" style="display:none;width:0;height:0;border:0"></iframe>
+    </div>
+
+    <p class="small">
+      Tip: For a true third-party test, the probe page must be on a <strong>different registrable domain</strong> (not just a different subdomain/port). For local dev, using
+      <code>localhost</code> vs <code>127.0.0.1</code> typically counts as cross-site in modern browsers.
+    </p>
+  </div>
+
+  <script>
+    // 👉 EDIT THIS to point to your probe page hosted on a DIFFERENT site.
+    const PROBE_URL = "https://www.seemycomp.com/3p-cookie-probe.html";
+
+    const els = {
+      btnPopup: document.getElementById('btnPopup'),
+      btnFP: document.getElementById('btnFP'),
+      btnTP: document.getElementById('btnTP'),
+      popupStatus: document.getElementById('popupStatus'),
+      popupText: document.getElementById('popupText'),
+      fpCookieStatus: document.getElementById('fpCookieStatus'),
+      fpCookieText: document.getElementById('fpCookieText'),
+      tpCookieStatus: document.getElementById('tpCookieStatus'),
+      tpCookieText: document.getElementById('tpCookieText'),
+      probeFrame: document.getElementById('probeFrame'),
+      probeUrlShown: document.getElementById('probeUrlShown')
+    };
+    els.probeUrlShown.textContent = `Probe URL: ${PROBE_URL}`;
+
+    function setStatus(elStatus, elText, ok, labelIfOk, labelIfBad) {
+      elStatus.classList.remove('ok','bad','warn');
+      const dot = elStatus.querySelector('.dot');
+      if (ok) {
+        elStatus.classList.add('ok');
+        elText.textContent = labelIfOk;
+        dot.style.background = getComputedStyle(document.documentElement).getPropertyValue('--ok');
+      } else {
+        elStatus.classList.add('bad');
+        elText.textContent = labelIfBad;
+        dot.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bad');
+      }
+    }
+
+    // 1) Pop-up test
+    els.btnPopup.addEventListener('click', () => {
+      let win = null;
+      try {
+        // Smallest possible window; most blockers will prevent this when triggered by script.
+        win = window.open('about:blank', '_blank', 'width=200,height=120,noopener,noreferrer');
+      } catch (e) { /* ignored */ }
+
+      const allowed = !!win && !win.closed;
+      if (allowed) {
+        try {
+          win.document.write('<!doctype html><title>Pop-up test</title><p style="font:14px system-ui;margin:8px">Pop-up allowed ✅</p>');
+          setTimeout(() => { try { win.close(); } catch(e){} }, 300);
+        } catch (e) { /* ignored */ }
+      }
+      setStatus(els.popupStatus, els.popupText, allowed, 'allowed', 'blocked');
+    });
+
+    // 2) First-party cookie test
+    els.btnFP.addEventListener('click', () => {
+      const name = 'fp_cookie_test';
+      const value = String(Date.now());
+      try {
+        document.cookie = `${name}=${value}; Max-Age=60; Path=/`;
+        const has = document.cookie.includes(`${name}=${value}`);
+        setStatus(els.fpCookieStatus, els.fpCookieText, has, 'working', 'blocked or disabled');
+      } catch (e) {
+        setStatus(els.fpCookieStatus, els.fpCookieText, false, 'working', 'blocked or disabled');
+      }
+    });
+
+    // 3) Third-party cookie test (via cross-site iframe + postMessage)
+    els.btnTP.addEventListener('click', () => {
+      // Reset UI
+      els.tpCookieStatus.classList.remove('ok','bad','warn');
+      els.tpCookieText.textContent = 'checking...';
+      els.tpCookieStatus.querySelector('.dot').style.background = '#bdbdbf';
+
+      // Listen once for the probe result
+      const timeout = setTimeout(() => {
+        // If no response in time, assume blocked or frame failed to load cross-site.
+        setStatus(els.tpCookieStatus, els.tpCookieText, false, 'allowed', 'no response (likely blocked)');
+        window.removeEventListener('message', onMsg);
+      }, 4000);
+
+      function onMsg(ev) {
+        // Expect { type: '3pc-result', allowed: boolean, detail?: string }
+        if (!ev || !ev.data || ev.data.type !== '3pc-result') return;
+        clearTimeout(timeout);
+        window.removeEventListener('message', onMsg);
+        const allowed = !!ev.data.allowed;
+        setStatus(els.tpCookieStatus, els.tpCookieText, allowed, 'allowed', 'blocked');
+      }
+
+      window.addEventListener('message', onMsg);
+      // Bust caches so the probe runs fresh each time:
+      const src = PROBE_URL + (PROBE_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+      els.probeFrame.src = src;
+    });
+  </script>
+</body>
+</html>
