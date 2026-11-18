@@ -1,0 +1,142 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --border: #d9dce3;
+  --text: #16181d;
+  --muted: #4f5561;
+  --link: #0b57d0;
+  --focus: #0b57d0;
+  --pass: #1a7f37;
+  --warn: #8a5300;
+  --fail: #b3261e;
+  --idle: #4f5561;
+  --pass-bg: #e8f5ec;
+  --warn-bg: #fdf3e1;
+  --fail-bg: #fbeaea;
+  --code-bg: #eef0f4;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121418;
+    --card: #1c1f25;
+    --border: #353a44;
+    --text: #eceef2;
+    --muted: #b3b9c4;
+    --link: #8ab4f8;
+    --focus: #8ab4f8;
+    --pass: #6fd38a;
+    --warn: #f2c063;
+    --fail: #ff8a80;
+    --idle: #a3a9b5;
+    --pass-bg: #16301f;
+    --warn-bg: #352812;
+    --fail-bg: #3a1a1a;
+    --code-bg: #262a32;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 1.25rem; }
+header.wrap { padding-top: 2rem; }
+footer.wrap { padding-bottom: 2rem; }
+
+h1 { margin: 0 0 .5rem; font-size: 1.75rem; line-height: 1.25; }
+h2 { margin: 0; font-size: 1.15rem; }
+.lede { margin: 0 0 1rem; color: var(--muted); max-width: 70ch; }
+.small { font-size: .925rem; color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; word-break: break-all; }
+
+a { color: var(--link); }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--card); color: var(--text); padding: .5rem 1rem; z-index: 10;
+}
+.skip:focus { left: 1rem; top: 1rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.tests { list-style: none; margin: 0; padding: 0; }
+
+.test-head {
+  display: flex; flex-wrap: wrap; gap: .75rem;
+  align-items: center; justify-content: space-between;
+}
+.what { margin: .35rem 0 .5rem; color: var(--muted); }
+
+.btn {
+  font: inherit; font-weight: 600;
+  min-height: 44px; padding: .5rem 1rem;
+  border-radius: 999px;
+  border: 2px solid var(--text);
+  background: transparent; color: var(--text);
+  cursor: pointer;
+}
+.btn.primary { background: var(--text); color: var(--card); }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin: 1rem 0 .5rem; }
+
+.env { display: grid; grid-template-columns: 1fr; gap: .25rem; margin: .75rem 0 0; }
+.env > div { display: grid; grid-template-columns: minmax(11rem, 14rem) 1fr; gap: .75rem; }
+.env dt { font-weight: 600; }
+.env dd { margin: 0; }
+@media (max-width: 560px) { .env > div { grid-template-columns: 1fr; gap: 0; margin-bottom: .4rem; } }
+
+/* Status line. Meaning is carried by the text and icon, not color alone. */
+.status {
+  display: flex; align-items: flex-start; gap: .5rem;
+  margin: 0; padding: .5rem .75rem;
+  border-radius: 10px;
+  font-weight: 700;
+  color: var(--idle);
+  background: var(--code-bg);
+}
+.status .icon { flex: none; width: 1.4rem; text-align: center; }
+.status[data-state="idle"] .icon::before    { content: "–"; }
+.status[data-state="running"] .icon::before { content: "…"; }
+.status[data-state="pass"]  { color: var(--pass); background: var(--pass-bg); }
+.status[data-state="pass"] .icon::before    { content: "✓"; }
+.status[data-state="warn"]  { color: var(--warn); background: var(--warn-bg); }
+.status[data-state="warn"] .icon::before    { content: "!"; }
+.status[data-state="fail"]  { color: var(--fail); background: var(--fail-bg); }
+.status[data-state="fail"] .icon::before    { content: "✕"; }
+
+.advice { margin: .5rem 0 0; }
+
+.notice { padding: .75rem 1rem; border-radius: 10px; margin: 0 0 1rem; font-weight: 600; }
+.notice.warn { color: var(--warn); background: var(--warn-bg); }
+
+.probe-wrap { margin-top: .75rem; }
+.probe-wrap iframe {
+  display: block; width: 100%; height: 150px;
+  border: 1px dashed var(--border); border-radius: 10px;
+  background: var(--card);
+}
+
+details { border-top: 1px solid var(--border); padding: .5rem 0; }
+details:last-child { border-bottom: 1px solid var(--border); }
+summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+details ul { margin: .5rem 0; padding-left: 1.25rem; }
+details li { margin-bottom: .4rem; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

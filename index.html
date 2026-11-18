@@ -1,283 +1,148 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Browser Privacy Check</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-:root{--ok:#1a7f37;--bad:#b3261e;--warn:#b26b00;--muted:#666}
-*{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:2rem;background:#f7f7f8;color:#111}
-.wrap{max-width:900px;margin:0 auto}
-h1{margin:0 0 .5rem}
-.small{color:var(--muted);font-size:.92rem}
-.card{background:#fff;border:1px solid #e6e6e9;border-radius:16px;padding:1rem 1.25rem;margin:1rem 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.row{display:flex;gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.btn{appearance:none;border:1px solid #111;border-radius:999px;padding:.6rem 1rem;background:#111;color:#fff;font-weight:600;cursor:pointer}
-.btn:disabled{opacity:.6;cursor:not-allowed}
-.status{display:inline-flex;align-items:center;gap:.5rem;font-weight:700}
-.dot{width:.7rem;height:.7rem;border-radius:50%;background:#bbb}
-.ok{color:var(--ok)} .ok .dot{background:var(--ok)}
-.bad{color:var(--bad)} .bad .dot{background:var(--bad)}
-.warn{color:var(--warn)}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-pre{background:#f0f0f3;padding:.75rem;border-radius:10px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto}
-a{color:#0b57d0}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser Check: Pop-ups and Cookies</title>
+  <meta name="description" content="Checks whether this browser allows pop-ups, cookies, and third-party cookies, and produces a summary you can paste into a support ticket.">
+  <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-<div class="wrap">
-  <h1>Browser Privacy Check</h1>
-  <p class="small">
-    This page checks pop-ups, first-party cookies, third-party cookies (via cross-site iframe), and a third-party popup.
-    <br>
-    <strong class="warn" id="schemeWarn" style="display:none">You’re on <span id="schemeLbl"></span>; please use http(s):// — cookies don’t work reliably on file://.</strong>
-  </p>
+  <a class="skip" href="#main">Skip to tests</a>
 
-  <!-- Pop-ups (same-origin) -->
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="status" id="popupStatus"><span class="dot"></span> Pop-ups: <span class="mono" id="popupText">not checked</span></div>
-        <div class="small">Opens a tiny window on click (user gesture required) and closes it shortly after.</div>
+  <header class="wrap">
+    <h1>Browser Check: Pop-ups and Cookies</h1>
+    <p class="lede">
+      Many sign-in pages, learning tools, and payment forms need pop-ups and cookies.
+      This page tests what your browser allows. Nothing is saved or sent anywhere;
+      test cookies are deleted when each check finishes.
+    </p>
+    <div class="notice warn" id="configNotice" hidden></div>
+  </header>
+
+  <main id="main" class="wrap">
+    <section class="card" aria-labelledby="envHeading">
+      <h2 id="envHeading">Your browser</h2>
+      <dl class="env" id="envList">
+        <div><dt>Browser</dt><dd id="envBrowser">Detecting…</dd></div>
+        <div><dt>Operating system</dt><dd id="envOS">Detecting…</dd></div>
+        <div><dt>Cookies enabled setting</dt><dd id="envCookieEnabled">…</dd></div>
+        <div><dt>Test site</dt><dd id="envHere" class="mono"></dd></div>
+        <div><dt>Third-party test site</dt><dd id="envPartner" class="mono"></dd></div>
+      </dl>
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnRunAll">Run all tests</button>
+        <button type="button" class="btn" id="btnCopy">Copy results</button>
+        <span class="small" id="copyStatus" role="status"></span>
       </div>
-      <button class="btn" id="btnPopup">Test pop-ups</button>
-    </div>
-  </div>
+      <p class="small">
+        “Run all” checks everything except the third-party pop-up: browsers allow only one pop-up per click,
+        so run test 5 with its own button.
+      </p>
+    </section>
 
-  <!-- First-party cookies -->
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="status" id="fpCookieStatus"><span class="dot"></span> First-party cookies: <span class="mono" id="fpCookieText">not checked</span></div>
-        <div class="small">Sets a cookie on this origin and reads it back.</div>
-      </div>
-      <button class="btn" id="btnFP">Test 1P cookies</button>
-    </div>
-  </div>
-
-  <!-- Third-party cookies via cross-site iframe -->
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="status" id="tpCookieStatus"><span class="dot"></span> Third-party cookies: <span class="mono" id="tpCookieText">not checked</span></div>
-        <div class="small">
-          Loads a cross-site iframe that attempts to set <code>SameSite=None; Secure</code> and reports back.
+    <ol class="tests">
+      <li class="card test" id="test-popup">
+        <div class="test-head">
+          <h2>1. Pop-ups</h2>
+          <button type="button" class="btn" data-run="popup">Test pop-ups</button>
         </div>
-        <div class="small mono">Probe URL: <span id="probeUrlShown"></span></div>
-      </div>
-      <button class="btn" id="btnTP">Test 3P cookies</button>
-    </div>
-    <details style="margin-top:.5rem">
-      <summary class="small">Details</summary>
-      <pre id="detailsBox" class="mono small">No details yet.</pre>
-    </details>
-    <iframe id="probeFrame" title="3P Cookie Probe" style="display:none;width:0;height:0;border:0"></iframe>
-  </div>
+        <p class="what">Opens a small window from this site, then closes it.</p>
+        <p class="status" role="status" data-state="idle"><span class="icon" aria-hidden="true"></span><span class="label">Not checked</span></p>
+        <p class="advice" hidden></p>
+      </li>
 
-  <!-- Third-party popup -->
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="status" id="tpPopupStatus"><span class="dot"></span> Third-party popup: <span class="mono" id="tpPopupText">not checked</span></div>
-        <div class="small">Opens a popup to a different origin. If blocked, a manual link will appear.</div>
-        <div class="small mono">Popup URL: <span id="tpPopupUrlShown"></span></div>
-      </div>
-      <button class="btn" id="btnTPPopup">Test 3P popup</button>
-    </div>
-    <div class="small" id="tpPopupFallbackWrap" style="display:none;margin-top:.5rem">
-      Popup blocked? <a id="tpPopupFallback" href="#" target="_blank" rel="noopener">Click to open manually</a>
-    </div>
-  </div>
-</div>
+      <li class="card test" id="test-cookies1p">
+        <div class="test-head">
+          <h2>2. Cookies for this site</h2>
+          <button type="button" class="btn" data-run="cookies1p">Test cookies</button>
+        </div>
+        <p class="what">Saves a cookie for this site, reads it back, and deletes it.</p>
+        <p class="status" role="status" data-state="idle"><span class="icon" aria-hidden="true"></span><span class="label">Not checked</span></p>
+        <p class="advice" hidden></p>
+      </li>
 
-<script>
-  // ====== EDIT THESE to point at your other domain (prefer HTTPS) ======
-  const PROBE_URL       = "https://www.seemycomp.com/3p-cookie-probe.html";
-  const PROBE_POPUP_URL = "https://www.seemycomp.com/3p-popup-probe.html";
-  // =====================================================================
+      <li class="card test" id="test-storage1p">
+        <div class="test-head">
+          <h2>3. Site storage</h2>
+          <button type="button" class="btn" data-run="storage1p">Test storage</button>
+        </div>
+        <p class="what">Checks that this site can use local storage and session storage, which many web apps need.</p>
+        <p class="status" role="status" data-state="idle"><span class="icon" aria-hidden="true"></span><span class="label">Not checked</span></p>
+        <p class="advice" hidden></p>
+      </li>
 
-  const els = {
-    schemeWarn: document.getElementById('schemeWarn'),
-    schemeLbl: document.getElementById('schemeLbl'),
+      <li class="card test" id="test-cookies3p">
+        <div class="test-head">
+          <h2>4. Third-party cookies</h2>
+          <button type="button" class="btn" data-run="cookies3p">Test third-party cookies</button>
+        </div>
+        <p class="what">
+          Loads a small frame from a different website and checks whether that frame can use its own cookies.
+          Embedded sign-ins and tools depend on this.
+        </p>
+        <p class="status" role="status" data-state="idle"><span class="icon" aria-hidden="true"></span><span class="label">Not checked</span></p>
+        <p class="advice" hidden></p>
+        <div class="probe-wrap" id="probeWrap" hidden>
+          <iframe id="probeFrame" title="Third-party cookie test frame" loading="eager"></iframe>
+        </div>
+      </li>
 
-    // popups
-    btnPopup: document.getElementById('btnPopup'),
-    popupStatus: document.getElementById('popupStatus'),
-    popupText: document.getElementById('popupText'),
+      <li class="card test" id="test-popup3p">
+        <div class="test-head">
+          <h2>5. Pop-up to another website</h2>
+          <button type="button" class="btn" data-run="popup3p">Test third-party pop-up</button>
+        </div>
+        <p class="what">Opens a small window on a different website. Sign-in pages often work this way.</p>
+        <p class="status" role="status" data-state="idle"><span class="icon" aria-hidden="true"></span><span class="label">Not checked</span></p>
+        <p class="advice" hidden></p>
+        <p class="small" id="popup3pFallback" hidden>
+          Pop-up blocked? <a id="popup3pLink" href="#" target="_blank">Open the test page in a new tab</a>
+          to confirm the other site loads.
+        </p>
+      </li>
+    </ol>
 
-    // 1P cookies
-    btnFP: document.getElementById('btnFP'),
-    fpCookieStatus: document.getElementById('fpCookieStatus'),
-    fpCookieText: document.getElementById('fpCookieText'),
+    <section class="card" aria-labelledby="fixHeading">
+      <h2 id="fixHeading">How to allow pop-ups and cookies</h2>
+      <p class="small">Menu names change between browser versions; these are the usual locations.</p>
+      <details>
+        <summary>Chrome</summary>
+        <ul>
+          <li><strong>Pop-ups:</strong> when a pop-up is blocked, select the blocked pop-up icon at the right end of the address bar, choose “Always allow pop-ups and redirects”, then select Done. Or go to Settings › Privacy and security › Site settings › Pop-ups and redirects.</li>
+          <li><strong>Third-party cookies:</strong> Settings › Privacy and security › Third-party cookies. Choose “Allow third-party cookies”, or add the site under “Sites allowed to use third-party cookies”. Incognito windows block them by default.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Microsoft Edge</summary>
+        <ul>
+          <li><strong>Pop-ups:</strong> Settings › Cookies and site permissions › Pop-ups and redirects. Add the site under “Allow”.</li>
+          <li><strong>Third-party cookies:</strong> Settings › Cookies and site permissions › Manage and delete cookies and site data. Turn off “Block third-party cookies”, or add the site under “Allow”. Strict tracking prevention can also block some sites.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Firefox</summary>
+        <ul>
+          <li><strong>Pop-ups:</strong> select Options in the yellow “Firefox prevented this site from opening a pop-up window” bar, then allow pop-ups for the site. Or go to Settings › Privacy &amp; Security › Permissions › Block pop-up windows › Exceptions.</li>
+          <li><strong>Third-party cookies:</strong> Firefox keeps a separate set of cookies for each site you visit (Total Cookie Protection). If an embedded tool fails, select the shield icon in the address bar and turn off Enhanced Tracking Protection for that site.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>Safari (Mac, iPhone, iPad)</summary>
+        <ul>
+          <li><strong>Pop-ups on Mac:</strong> Safari › Settings › Websites › Pop-up Windows. Set the site to “Allow”.</li>
+          <li><strong>Pop-ups on iPhone and iPad:</strong> Settings › Apps › Safari, then turn off “Block Pop-ups”.</li>
+          <li><strong>Third-party cookies:</strong> Safari blocks them by default (“Prevent cross-site tracking”). Turning that off allows them but reduces privacy; try test 4’s “Allow access” button first.</li>
+        </ul>
+      </details>
+    </section>
+  </main>
 
-    // 3P cookies
-    btnTP: document.getElementById('btnTP'),
-    tpCookieStatus: document.getElementById('tpCookieStatus'),
-    tpCookieText: document.getElementById('tpCookieText'),
-    probeFrame: document.getElementById('probeFrame'),
-    probeUrlShown: document.getElementById('probeUrlShown'),
-    detailsBox: document.getElementById('detailsBox'),
+  <footer class="wrap small">
+    <p>Source: <a href="https://github.com/csogi/PopUpCookieTester">github.com/csogi/PopUpCookieTester</a></p>
+  </footer>
 
-    // 3P popup
-    btnTPPopup: document.getElementById('btnTPPopup'),
-    tpPopupStatus: document.getElementById('tpPopupStatus'),
-    tpPopupText: document.getElementById('tpPopupText'),
-    tpPopupUrlShown: document.getElementById('tpPopupUrlShown'),
-    tpPopupFallbackWrap: document.getElementById('tpPopupFallbackWrap'),
-    tpPopupFallback: document.getElementById('tpPopupFallback'),
-  };
-
-  els.probeUrlShown.textContent = PROBE_URL;
-  els.tpPopupUrlShown.textContent = PROBE_POPUP_URL;
-
-  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
-    els.schemeWarn.style.display = 'inline';
-    els.schemeLbl.textContent = location.protocol.replace(':','') + '://';
-  }
-
-  function setStatus(container, textEl, ok, okLabel, badLabel) {
-    container.classList.remove('ok','bad');
-    const dot = container.querySelector('.dot');
-    if (ok) {
-      container.classList.add('ok');
-      textEl.textContent = okLabel;
-      dot.style.background = getComputedStyle(document.documentElement).getPropertyValue('--ok');
-    } else {
-      container.classList.add('bad');
-      textEl.textContent = badLabel;
-      dot.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bad');
-    }
-  }
-
-  function logDetail(msg) {
-    const now = new Date().toISOString();
-    els.detailsBox.textContent += `\n[${now}] ${msg}`;
-  }
-
-  // ---- Pop-up test (same-origin) ----
-  // ---- Pop-up test (robust, self-closing) ----
-  els.btnPopup.addEventListener('click', () => {
-    let w = null, opened = false, err = '';
-
-    try {
-      // Open a blank popup synchronously on the click gesture.
-      // NOTE: no "noopener" here so we can also close it from the opener if needed.
-      w = window.open('about:blank', 'popup_test', 'popup=1,width=360,height=240');
-      opened = !!w && !w.closed;
-    } catch (e) {
-      err = e.message || String(e);
-    }
-
-    if (!opened) {
-      setStatus(els.popupStatus, els.popupText, false, 'allowed', 'blocked');
-      return;
-    }
-
-    // Write a tiny self-closing document into the popup
-    try {
-      w.document.open();
-      w.document.write(
-        '<!doctype html><html><head><meta charset="utf-8"><title>Pop-up test</title>' +
-        '<meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
-        '<body style="font:14px system-ui;margin:12px">' +
-        'Pop-up allowed ✅ — closing…' +
-        '<script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 600);<\/script>' +
-        '</body></html>'
-      );
-      w.document.close();
-    } catch (e) {
-      // If writing fails, we’ll still try to close from the opener
-    }
-
-    // Update UI immediately
-    setStatus(els.popupStatus, els.popupText, true, 'allowed (auto-closing...)', 'blocked');
-
-    // Safety: if the popup didn’t self-close, try from the opener after a moment
-    setTimeout(() => { try { if (w && !w.closed) w.close(); } catch(e){} }, 1500);
-
-    // Final check: if it’s still open, let the user know to close it manually
-    setTimeout(() => {
-      try {
-        if (w && !w.closed) {
-          setStatus(els.popupStatus, els.popupText, true, 'opened (please close manually)', 'blocked');
-        }
-      } catch (e) {/* ignore */}
-    }, 2500);
-  });
-
-  // ---- First-party cookie test ----
-  els.btnFP.addEventListener('click', () => {
-    const name = 'fp_cookie_test';
-    const value = String(Date.now());
-    let ok = false, err = '';
-    try {
-      document.cookie = `${name}=${value}; Max-Age=60; Path=/`;
-      ok = document.cookie.includes(`${name}=${value}`);
-    } catch(e) { err = e.message || String(e); }
-    setStatus(els.fpCookieStatus, els.fpCookieText, ok, 'working', 'blocked or disabled');
-    if (!ok) logDetail(`1P cookie: write/read failed. scheme=${location.protocol}, cookieEnabled=${navigator.cookieEnabled}, err=${err}`);
-  });
-
-  // ---- Third-party cookie test (cross-site HTTPS iframe + postMessage) ----
-  els.btnTP.addEventListener('click', () => {
-    els.tpCookieStatus.classList.remove('ok','bad');
-    els.tpCookieText.textContent = 'checking...';
-    els.tpCookieStatus.querySelector('.dot').style.background = '#bbb';
-
-    if (!/^https:$/i.test(new URL(PROBE_URL).protocol)) {
-      logDetail('3P cookie: PROBE_URL is not HTTPS — modern browsers require Secure for SameSite=None.');
-    }
-
-    const timeout = setTimeout(() => {
-      setStatus(els.tpCookieStatus, els.tpCookieText, false, 'allowed', 'no response (blocked frame or network)');
-      logDetail('3P cookie: no postMessage response from probe (likely blocked, mixed-content, or CSP).');
-      window.removeEventListener('message', onMsg);
-    }, 6000);
-
-    function onMsg(ev) {
-      // Expect { type: '3pc-result', allowed: boolean, detail?: string }
-      if (!ev || !ev.data || ev.data.type !== '3pc-result') return;
-      clearTimeout(timeout);
-      window.removeEventListener('message', onMsg);
-      const { allowed, detail } = ev.data;
-      setStatus(els.tpCookieStatus, els.tpCookieText, !!allowed, 'allowed', 'blocked');
-      logDetail(`3P cookie result from ${ev.origin}: allowed=${!!allowed}; detail=${detail || 'n/a'}`);
-    }
-
-    window.addEventListener('message', onMsg);
-    els.probeFrame.src = PROBE_URL + (PROBE_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
-  });
-
-  // ---- Third-party popup test ----
-  // Receive ack from popup
-  window.addEventListener('message', (ev) => {
-    if (!ev || !ev.data || ev.data.type !== 'tp-popup-opened') return;
-    setStatus(els.tpPopupStatus, els.tpPopupText, true, 'opened', 'blocked');
-    els.tpPopupFallbackWrap.style.display = 'none';
-  });
-
-  els.btnTPPopup.addEventListener('click', () => {
-    const url = PROBE_POPUP_URL + (PROBE_POPUP_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
-    let win = null;
-    try { win = window.open(url, 'tp_probe', 'width=480,height=600,noopener'); } catch (e) {}
-    const opened = !!win && !win.closed;
-
-    if (opened) {
-      setStatus(els.tpPopupStatus, els.tpPopupText, true, 'opened (awaiting ack...)', 'blocked');
-      setTimeout(() => {
-        if (els.tpPopupText.textContent.includes('awaiting')) {
-          // Popup opened but no ack (content blocked / JS disabled / message blocked by policy)
-          setStatus(els.tpPopupStatus, els.tpPopupText, true, 'opened (no ack)', 'blocked');
-        }
-      }, 4000);
-    } else {
-      setStatus(els.tpPopupStatus, els.tpPopupText, false, 'opened', 'blocked');
-      // Show manual link fallback — many blockers allow a user-clicked <a target="_blank">
-      els.tpPopupFallback.href = url;
-      els.tpPopupFallbackWrap.style.display = 'inline';
-    }
-  });
-</script>
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
 </body>
 </html>

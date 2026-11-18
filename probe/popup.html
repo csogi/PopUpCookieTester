@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser Check: pop-up test</title>
+  <style>
+    :root { color-scheme: light dark; --muted:#4f5561; --link:#0b57d0; --pass:#1a7f37; }
+    @media (prefers-color-scheme: dark) { :root { --muted:#b3b9c4; --link:#8ab4f8; --pass:#6fd38a; } }
+    body { margin: 0; padding: 1.25rem; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    h1 { font-size: 1.3rem; margin: 0 0 .5rem; color: var(--pass); }
+    .muted { color: var(--muted); }
+    code { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    button { font: inherit; font-weight: 600; min-height: 44px; padding: .4rem 1.1rem; border-radius: 999px; border: 2px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+    :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>✓ Pop-up opened</h1>
+    <p>This window is on <code id="host"></code>, a different website from the test page.</p>
+    <p id="ack" class="muted" role="status"></p>
+    <p id="cookie" class="muted"></p>
+    <p><button type="button" id="btnClose">Close</button></p>
+    <p class="muted small" id="auto"></p>
+  </main>
+
+  <script src="../config.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var $ = function (id) { return document.getElementById(id); };
+    $("host").textContent = location.host;
+
+    var allowed = ((window.BROWSERCHECK_CONFIG || {}).sites || []).map(function (s) {
+      try { return new URL(s).origin; } catch (e) { return null; }
+    }).filter(Boolean);
+    var openerOrigin = new URLSearchParams(location.search).get("opener");
+
+    // Report back to the test page (only if it is a configured site).
+    if (window.opener && openerOrigin && allowed.indexOf(openerOrigin) !== -1) {
+      try {
+        window.opener.postMessage({ type: "bc-popup-ack" }, openerOrigin);
+        $("ack").textContent = "Result sent to the test page. You can close this window.";
+      } catch (e) {
+        $("ack").textContent = "Could not report back to the test page.";
+      }
+    } else {
+      $("ack").textContent = "This page loaded, so the site is reachable. (It was not opened by the test page, so no result was reported.)";
+    }
+
+    // Cookies for this site while it is the top-level page.
+    var name = "bc_popup_test", val = Math.random().toString(36).slice(2);
+    var attrs = "; Path=/; SameSite=Lax" + (window.isSecureContext ? "; Secure" : "");
+    var ok = false;
+    try {
+      document.cookie = name + "=" + val + "; Max-Age=60" + attrs;
+      ok = document.cookie.indexOf(name + "=" + val) !== -1;
+      document.cookie = name + "=; Max-Age=0" + attrs;
+    } catch (e) {}
+    $("cookie").textContent = "Cookies for " + location.host + " as the main page: " + (ok ? "working." : "blocked.");
+
+    // Selecting Close counts as a visit with interaction, which some browsers
+    // require before the Storage Access API ("Allow access") will succeed.
+    $("btnClose").addEventListener("click", function () { window.close(); });
+
+    // Close automatically if opened by the test page and the user does nothing.
+    if (window.opener) {
+      var secs = 8;
+      var tick = function () {
+        $("auto").textContent = "This window will close in " + secs + " seconds.";
+        if (secs-- <= 0) { try { window.close(); } catch (e) {} return; }
+        timer = setTimeout(tick, 1000);
+      };
+      var timer = setTimeout(tick, 0);
+      document.addEventListener("pointerdown", function () { clearTimeout(timer); $("auto").textContent = ""; }, { once: true });
+      document.addEventListener("keydown", function () { clearTimeout(timer); $("auto").textContent = ""; }, { once: true });
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Third-party cookie test frame</title>
+  <style>
+    :root { color-scheme: light dark; --muted:#4f5561; --link:#0b57d0; }
+    @media (prefers-color-scheme: dark) { :root { --muted:#b3b9c4; --link:#8ab4f8; } }
+    body { margin: 0; padding: .75rem 1rem; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: transparent; }
+    p { margin: 0 0 .5rem; }
+    .muted { color: var(--muted); }
+    button { font: inherit; font-weight: 600; min-height: 44px; padding: .4rem 1rem; border-radius: 999px; border: 2px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+    :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <p><strong>Test frame from <span id="host"></span></strong></p>
+  <p id="msg" class="muted" role="status">Running…</p>
+  <p id="reqWrap" hidden>
+    <button type="button" id="btnRequest">Allow access</button>
+  </p>
+
+  <script src="../config.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var $ = function (id) { return document.getElementById(id); };
+    $("host").textContent = location.host;
+
+    // Only report to pages listed in config.js.
+    var allowed = ((window.BROWSERCHECK_CONFIG || {}).sites || []).map(function (s) {
+      try { return new URL(s).origin; } catch (e) { return null; }
+    }).filter(Boolean);
+    var parentOrigin = new URLSearchParams(location.search).get("parent");
+    var framed = window.parent !== window;
+
+    if (!framed) {
+      $("msg").textContent = "This page is part of the Browser Check and is meant to be loaded inside the test page.";
+      return;
+    }
+    if (!parentOrigin || allowed.indexOf(parentOrigin) === -1) {
+      $("msg").textContent = "This test page is not listed in config.js, so results will not be reported.";
+      return;
+    }
+
+    var secure = window.isSecureContext;
+    var attrs = "; Path=/; SameSite=None" + (secure ? "; Secure" : "");
+
+    function setAndRead(name, extra) {
+      var val = Math.random().toString(36).slice(2);
+      try {
+        document.cookie = name + "=" + val + "; Max-Age=60" + attrs + (extra || "");
+        var ok = document.cookie.indexOf(name + "=" + val) !== -1;
+        document.cookie = name + "=; Max-Age=0" + attrs + (extra || "");
+        return ok;
+      } catch (e) { return false; }
+    }
+
+    function hasAccess() {
+      if (!document.hasStorageAccess) return Promise.resolve(null); // API not supported
+      return document.hasStorageAccess().catch(function () { return null; });
+    }
+
+    function run(granted) {
+      var cookieOk = setAndRead("bc_3p_test");
+      var chipsOk = setAndRead("bc_3p_chips", "; Partitioned");
+      var details = [];
+
+      return hasAccess().then(function (sa) {
+        var verdict;
+        // cookieOk with storage access false = the browser gave us a separate
+        // per-site cookie jar (e.g. Firefox Total Cookie Protection).
+        if (cookieOk && sa !== false) verdict = "allowed";
+        else if (cookieOk || chipsOk) verdict = "partitioned";
+        else verdict = "blocked";
+
+        details.push("cookie readable=" + cookieOk);
+        details.push("partitioned (CHIPS) cookie readable=" + chipsOk);
+        details.push("hasStorageAccess=" + (sa === null ? "unsupported" : sa));
+        details.push("secure context=" + secure);
+
+        var canRequest = verdict !== "allowed" && typeof document.requestStorageAccess === "function";
+        $("reqWrap").hidden = !canRequest;
+        $("msg").textContent = {
+          allowed: "This frame can use its cookies.",
+          partitioned: "This frame only gets a separate, per-site set of cookies.",
+          blocked: "This frame cannot use cookies."
+        }[verdict] + (canRequest ? " Select “Allow access” to ask the browser for permission." : "");
+
+        window.parent.postMessage({
+          type: "bc-3pc-result",
+          verdict: verdict,
+          granted: !!granted,
+          canRequest: canRequest,
+          detail: details.join("; ")
+        }, parentOrigin);
+        reportHeight();
+      });
+    }
+
+    function reportHeight() {
+      window.parent.postMessage({ type: "bc-probe-resize", height: document.documentElement.scrollHeight + 4 }, parentOrigin);
+    }
+
+    $("btnRequest").addEventListener("click", function () {
+      $("msg").textContent = "Asking the browser for permission…";
+      document.requestStorageAccess().then(function () {
+        return run(true);
+      }).catch(function () {
+        $("msg").textContent = "The browser denied access. Some browsers only allow this after you have visited " +
+          location.host + " directly. Run test 5 (pop-up to another website), select “Close” in that window, then try again.";
+        reportHeight();
+      });
+    });
+
+    run(false);
+  })();
+  </script>
+</body>
+</html>
